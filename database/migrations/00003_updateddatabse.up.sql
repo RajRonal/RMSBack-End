@@ -1,0 +1,1 @@
+create unique index dishes_index ON  dishes (dish_name, restaurant_id ) where (archived_at is null);
