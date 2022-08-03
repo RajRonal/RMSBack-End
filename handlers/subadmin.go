@@ -47,6 +47,7 @@ func FetchAllRestaurantSubAdmin(writer http.ResponseWriter, request *http.Reques
 	errs := json.NewEncoder(writer).Encode(user)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -76,6 +77,7 @@ func DeleteRestaurantSubAdmin(writer http.ResponseWriter, request *http.Request)
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -111,6 +113,7 @@ func UpdateRestaurantSubAdmin(writer http.ResponseWriter, request *http.Request)
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -162,8 +165,8 @@ func DeleteDishSubAdmin(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	check := helper.CheckDeleteDish(DishID)
-	if check != uc.ID {
+	dishId := helper.CheckDeleteDish(DishID)
+	if dishId != uc.ID {
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -197,8 +200,8 @@ func UpdateDishSubAdmin(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	check := helper.CheckDeleteDish(DishID)
-	if check != uc.ID {
+	checkId := helper.CheckDeleteDish(DishID)
+	if checkId != uc.ID {
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -214,5 +217,6 @@ func UpdateDishSubAdmin(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }

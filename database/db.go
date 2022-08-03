@@ -67,7 +67,7 @@ func migrateUp(db *sqlx.DB) error {
 func Tx(fn func(tx *sqlx.Tx) error) error {
 	tx, err := DB.Beginx()
 	if err != nil {
-		return fmt.Errorf("failed to start a transaction: %+v", err)
+		return err
 	}
 	defer func() {
 		if err != nil {

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"Rms/database/helper"
+	"Rms/models"
 	"net/http"
 )
 
@@ -13,7 +14,7 @@ func SubAdminMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		signedUserRole := ctx.Role
-		if signedUserRole != "sub-admin" {
+		if signedUserRole != string(models.UserRoleSubAdmin) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}

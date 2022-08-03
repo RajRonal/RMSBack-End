@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
 
@@ -47,7 +47,7 @@ func FetchAllUserRole(writer http.ResponseWriter, request *http.Request) {
 
 	user, err := helper.GetAllUserData(status, Page, Limit, isRole)
 	if err != nil {
-		log.Printf("FetchAllRole: Sub Admin can't be fetched %v", err)
+		logrus.Error("FetchAllRole: Sub Admin can't be fetched %v", err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -62,7 +62,7 @@ func ChangeUserRole(writer http.ResponseWriter, request *http.Request) {
 	UserID := chi.URLParam(request, "userId")
 	err := helper.ChangeRole(UserID)
 	if err != nil {
-		log.Printf("ChangeUserRole: User role can't be fetched %v", err)
+		logrus.Error("ChangeUserRole: User role can't be fetched %v", err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -71,6 +71,7 @@ func ChangeUserRole(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -90,7 +91,7 @@ func CreateRestaurant(writer http.ResponseWriter, request *http.Request) {
 
 	_, err = helper.AddRestaurant(restaurant.Name, uc.ID, restaurant.Longitude, restaurant.Latitude)
 	if err != nil {
-		log.Printf(" FeedIntoRestaurant:error in adding restaurant %v", err)
+		logrus.Error(" FeedIntoRestaurant:error in adding restaurant %v", err)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -99,6 +100,7 @@ func CreateRestaurant(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(message)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -125,7 +127,7 @@ func FetchAllRestaurant(writer http.ResponseWriter, request *http.Request) {
 
 	restaurant, err := helper.GetAllRestaurant(Page, Limit, searchRestaurant)
 	if err != nil {
-		log.Printf("FetchAllRestaurant: restaurant  can't be fetched %V", err)
+		logrus.Error("FetchAllRestaurant: restaurant  can't be fetched %V", err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -133,6 +135,7 @@ func FetchAllRestaurant(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(restaurant)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -159,7 +162,7 @@ func FetchAllDish(writer http.ResponseWriter, request *http.Request) {
 
 	dishes, err := helper.GetAllDishes(RestaurantID, Page, Limit)
 	if err != nil {
-		log.Printf("FetchAllDish: restaurant  can't be fetched %v", err)
+		logrus.Error("FetchAllDish: restaurant  can't be fetched %v", err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -167,6 +170,7 @@ func FetchAllDish(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(dishes)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -181,7 +185,7 @@ func UpdateRestaurant(writer http.ResponseWriter, request *http.Request) {
 
 	err = helper.UpdateRestaurant(RestaurantID, restaurant.Name)
 	if err != nil {
-		log.Printf("UpdateRestaurant: can't update restaurant %v", err)
+		logrus.Error("UpdateRestaurant: can't update restaurant %v", err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -190,6 +194,7 @@ func UpdateRestaurant(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -197,7 +202,7 @@ func DeleteRestaurant(writer http.ResponseWriter, request *http.Request) {
 	RestaurantID := chi.URLParam(request, "id")
 	err := helper.DeleteRestaurant(RestaurantID)
 	if err != nil {
-		log.Printf("DeleteRestaurant: can't delete  %v", err)
+		logrus.Error("DeleteRestaurant: can't delete  %v", err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -206,6 +211,7 @@ func DeleteRestaurant(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -224,9 +230,9 @@ func CreateDish(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	_, err = helper.InsertDishes(dish.DishName, RestaurantID, uc.ID, dish.DishPrice)
+	_, err = helper.InsertDish(dish.DishName, RestaurantID, uc.ID, dish.DishPrice)
 	if err != nil {
-		log.Printf("FeedIntoDishes:error in adding dishes %v", err)
+		logrus.Error("FeedIntoDishes:error in adding dishes %v", err)
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -241,7 +247,7 @@ func DeleteDish(writer http.ResponseWriter, request *http.Request) {
 	DishID := chi.URLParam(request, "dishId")
 	err := helper.DeleteDish(DishID)
 	if err != nil {
-		log.Printf("DeleteDish: can't delete dish %v", err)
+		logrus.Error("DeleteDish: can't delete dish %v", err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -249,6 +255,7 @@ func DeleteDish(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -262,7 +269,7 @@ func UpdateDish(writer http.ResponseWriter, request *http.Request) {
 	}
 	err = helper.UpdateDish(DishID, user.DishName)
 	if err != nil {
-		log.Printf("update Error : can't update dish %v", err)
+		logrus.Error("update Error : can't update dish %v", err)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -270,5 +277,6 @@ func UpdateDish(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }

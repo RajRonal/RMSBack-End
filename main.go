@@ -4,6 +4,7 @@ import (
 	"Rms/database"
 	"Rms/server"
 	"github.com/sirupsen/logrus"
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -18,7 +19,7 @@ func main() {
 
 	err := database.ConnectAndMigrate(os.Getenv("host"), os.Getenv("port"), os.Getenv("databaseName"), os.Getenv("user"), os.Getenv("password"), database.SSLModeDisable)
 	if err != nil {
-		logrus.Error(err)
+		log.Fatal(err)
 		return
 	}
 
@@ -26,7 +27,7 @@ func main() {
 	srv := server.SetupRoutes()
 	err = srv.Run(":8081")
 	if err != nil {
-		logrus.Error(err)
+		log.Fatal(err)
 		return
 	}
 }

@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"Rms/database"
 	"encoding/json"
 	"fmt"
+	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
@@ -22,34 +24,34 @@ var JwtKey = []byte("secureSecretText")
 func SignUp(writer http.ResponseWriter, request *http.Request) {
 	var user models.CreateUser
 
-	error := json.NewDecoder(request.Body).Decode(&user)
-	if error != nil {
-		logrus.Error("SignUp: Error in decoding json %v", error)
+	errors := json.NewDecoder(request.Body).Decode(&user)
+	if errors != nil {
+		logrus.Error("SignUp: Error in decoding json %v", errors)
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	txErr := database.Tx(func(tx *sqlx.Tx) error {
+		userID, err := helper.CreateUser(user)
+		if err != nil {
+			logrus.Error("SignUp : Error in adding details to user table")
+			writer.WriteHeader(http.StatusInternalServerError)
+			return err
+		}
 
-	userID, err := helper.CreateUser(user)
-	if err != nil {
-		logrus.Error("SignUp: Error in Creating user %v", err)
+		err = helper.CreateRole(userID, user.Username, string(models.UserRoleUser), tx)
+		if err != nil {
+			logrus.Error("SignUp : Error in adding details to role table")
+			writer.WriteHeader(http.StatusInternalServerError)
+			return err
+		}
+		return err
+	})
+
+	if txErr != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
 		return
-	}
-
-	err = helper.CreateRole(userID, user.Username, string(models.UserRoleUser))
-	if err != nil {
-		logrus.Error("SignUp:error in allocating role to the user %v", err)
-		writer.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	message := "User Creation successful"
-	errs := json.NewEncoder(writer).Encode(message)
-	if errs != nil {
-		logrus.Error("SignUp: Error in Encoding json %v", errs)
-		writer.WriteHeader(http.StatusInternalServerError)
 	}
 }
-
 func Login(w http.ResponseWriter, r *http.Request) {
 	var credentials models.Credential
 	err := json.NewDecoder(r.Body).Decode(&credentials)
@@ -191,5 +193,6 @@ func SignOut(writer http.ResponseWriter, request *http.Request) {
 	errs := json.NewEncoder(writer).Encode(printMessage)
 	if errs != nil {
 		writer.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 }

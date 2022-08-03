@@ -5,6 +5,7 @@ import (
 	"Rms/database"
 	"Rms/models"
 	"database/sql"
+	"github.com/jmoiron/sqlx"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
@@ -26,7 +27,7 @@ func CreateUser(user models.CreateUser) (string, error) {
 	return userID, nil
 }
 
-func CreateRole(id, username, role string) error {
+func CreateRole(id, username, role string, tx *sqlx.Tx) error {
 	SQL := `INSERT INTO roles(user_id,user_role,username)
            VALUES($1,$2,$3)`
 	_, err := database.DB.Exec(SQL, id, role, username)
@@ -140,7 +141,7 @@ func GetAllRestaurant(pageNo, taskSize int, search string) (models.PaginatedRest
 	data.Data = user
 	return data, err
 }
-func InsertDishes(dishname, restauarntID, userID string, dishPrice float64) (string, error) {
+func InsertDish(dishname, restauarntID, userID string, dishPrice float64) (string, error) {
 	SQL := `INSERT INTO dishes (dish_name, dish_price, restaurant_id, created_by)
 	VALUES ($1, $2, $3, $4)`
 	var user string
@@ -172,11 +173,11 @@ func GetAllDishes(id string, pageNo, taskSize int) (models.PaginatedDishes, erro
 	data.Data = user
 	return data, err
 }
-func ChangeRole(id string) error {
+func ChangeRole(userId string) error {
 	SQL := `UPDATE roles
 	SET user_role=$1
 	WHERE user_id=$2 and archived_at is null`
-	_, err := database.DB.Exec(SQL, models.UserRoleSubAdmin, id)
+	_, err := database.DB.Exec(SQL, models.UserRoleSubAdmin, userId)
 	if err != nil {
 		logrus.Error("ChangeRole: Error in changing role %v", err)
 		return err
@@ -194,22 +195,22 @@ func DeleteDish(id string) error {
 	}
 	return nil
 }
-func UpdateDish(id, name string) error {
+func UpdateDish(dishID, name string) error {
 	SQL := `UPDATE dishes
 	SET dish_name=$2
 	WHERE dish_id=$1 and archived_at is null`
-	_, err := database.DB.Exec(SQL, id, name)
+	_, err := database.DB.Exec(SQL, dishID, name)
 	if err != nil {
 		logrus.Error("UpdateDish: Error in updating dish %v", err)
 		return err
 	}
 	return nil
 }
-func DeleteRestaurant(id string) error {
+func DeleteRestaurant(restaurantId string) error {
 	SQL := `UPDATE restaurant
 	SET archived_at=now()
 	WHERE restaurant_id=$1 and archived_at is null`
-	_, err := database.DB.Exec(SQL, id)
+	_, err := database.DB.Exec(SQL, restaurantId)
 	if err != nil {
 		logrus.Error("DeleteRestaurant:Error in deleting dish %v", err)
 		return err
@@ -227,7 +228,7 @@ func GetAllRestaurantSubAdmin(id string, pageNo, taskSize int) (models.Paginated
 	user := make([]models.Restaurant, 0)
 	err := database.DB.Select(&user, SQL, taskSize, pageNo*taskSize, id)
 	if err != nil {
-		log.Printf("GetAllRestaurantSubAdmin: error in fetching data: %v", err)
+		logrus.Error("GetAllRestaurantSubAdmin: error in fetching data: %v", err)
 	}
 	if len(user) == 0 {
 		return data, err
@@ -257,33 +258,33 @@ func GetAllDishesSubAdmin(id, userid string, pageNo, taskSize int) (models.Pagin
 	data.Data = user
 	return data, err
 }
-func DeleteDishSubAdmin(id, userid string) error {
+func DeleteDishSubAdmin(dishId, userid string) error {
 	SQL := `UPDATE dishes
 	SET archived_at=now()
 	WHERE dish_id=$1 and created_by=$2 and archived_at is null`
-	_, err := database.DB.Exec(SQL, id, userid)
+	_, err := database.DB.Exec(SQL, dishId, userid)
 	if err != nil {
 		logrus.Error("DeleteDishSubAdmin: Error in deleting dish subadmin %v", err)
 		return err
 	}
 	return nil
 }
-func UpdateDishSubAdmin(id, name string) error {
+func UpdateDishSubAdmin(dishId, name string) error {
 	SQL := `UPDATE dishes
 	SET dish_name=$2
 	WHERE dish_id=$1  and archived_at is Null`
-	_, err := database.DB.Exec(SQL, id, name)
+	_, err := database.DB.Exec(SQL, dishId, name)
 	if err != nil {
 		logrus.Error("UpdateDishSubAdmin: Error in uodating dish in subadmin role %v", err)
 		return err
 	}
 	return nil
 }
-func DeleteRestaurantSubAdmin(id, userID string) error {
+func DeleteRestaurantSubAdmin(restaurantId, userID string) error {
 	SQL := `UPDATE restaurant
 	SET archived_at=now()
 	WHERE restaurant_id=$1 and created_by=$2 and archived_at is NULL`
-	_, err := database.DB.Exec(SQL, id, userID)
+	_, err := database.DB.Exec(SQL, restaurantId, userID)
 	if err != nil {
 		logrus.Error("DeleteRestaurantSubAdmin: Error in deleting restaurant in subadmin role %v", err)
 		return err
@@ -302,10 +303,10 @@ func SetLocation(longitude, latitude float64, userid string) (string, error) {
 	}
 	return user, nil
 }
-func GetRestaurantLongitudeLatitude(resID string) (models.Location, error) {
+func GetRestaurantLongitudeLatitude(restaurantId string) (models.Location, error) {
 	var user models.Location
 	SQL := `SELECT longitude,latitude FROM restaurant WHERE restaurant_id=$1 and archived_at is null`
-	err := database.DB.Get(&user, SQL, resID)
+	err := database.DB.Get(&user, SQL, restaurantId)
 	if err != nil {
 		logrus.Error("GetRestaurantLongitudeLatitude: error in fetching restautant distance %v", err)
 		return user, err
@@ -322,34 +323,35 @@ func GetUserLongitudeLatitude(id string) (models.Location, error) {
 		return user, err
 	}
 	return user, nil
+
 }
 
-func GetDistance(reslong, reslati, userlong, userlati float64) (models.LocationDistance, error) {
+func GetDistance(restaurantLongitude, restaurantLatitude, userLongitude, userLatitude float64) (models.LocationDistance, error) {
 	var result models.LocationDistance
 	SQL := `SELECT (point($1,$2) <-> point($3,$4))as distance`
-	err := database.DB.Get(&result, SQL, userlong, userlati, reslong, reslati)
+	err := database.DB.Get(&result, SQL, userLongitude, userLatitude, restaurantLongitude, restaurantLatitude)
 	if err != nil {
 		logrus.Error("GetLocation: Error in calculating distance %v", err)
 		return result, err
 	}
 	return result, nil
 }
-func UpdateRestaurant(resID, resName string) error {
+func UpdateRestaurant(restaurantId, restaurantName string) error {
 	SQL := `UPDATE restaurant
 	SET restaurant_name=$1
 	WHERE restaurant_id=$2 AND archived_at IS NULL`
-	_, err := database.DB.Exec(SQL, resName, resID)
+	_, err := database.DB.Exec(SQL, restaurantName, restaurantId)
 	if err != nil {
 		logrus.Error("UpdateRestaurant: error in updating restaurant %v", err)
 		return err
 	}
 	return nil
 }
-func UpdateRestaurantSubAdmin(resID, resName, userID string) error {
+func UpdateRestaurantSubAdmin(restaurantId, restaurantName, userID string) error {
 	SQL := `UPDATE restaurant
 	SET restaurant_name=$1
 	WHERE restaurant_id=$2 AND archived_at IS NULL and created_by=$3`
-	_, err := database.DB.Exec(SQL, resName, resID, userID)
+	_, err := database.DB.Exec(SQL, restaurantName, restaurantId, userID)
 	if err != nil {
 		logrus.Error("UpdateRestaurantSubAdmin: Error in updating restaurant in sub-admin role %v", err)
 		return err
@@ -367,11 +369,11 @@ func CheckUpdate(resID string) string {
 	}
 	return user
 }
-func CheckDeleteDish(resID string) string {
+func CheckDeleteDish(restaurantId string) string {
 	var user string
 	SQL := `SELECT created_by from dishes 
 			where dish_id=$1 `
-	err := database.DB.Get(&user, SQL, resID)
+	err := database.DB.Get(&user, SQL, restaurantId)
 	if err != nil {
 		logrus.Error("CheckDeleteDish:Error in checking dish owner %v", err)
 		return err.Error()
