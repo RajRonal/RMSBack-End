@@ -1,1 +1,0 @@
-create unique index restaurant_index ON  restaurant(restaurant_name,longitude,latitude) where (archived_at is null);
